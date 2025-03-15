@@ -1,0 +1,69 @@
+---
+title: "DATA607_Project3_JobSkills"
+author: "Aaliyah John-Harry"
+date: "2025-03-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+job_postings_df <- read_csv("/Users/aaliyahmjh/Downloads/job_postings.csv", show_col_types = FALSE)
+job_skills_df <- read_csv("/Users/aaliyahmjh/Downloads/job_skills.csv", show_col_types = FALSE)
+```
+
+```{r}
+skills <- job_skills_df %>%
+  distinct(job_skills) %>%
+  mutate(skill_id = row_number())
+```
+
+```{r}
+job_postings_with_skills <- job_postings_df %>%
+  left_join(job_skills_df, by = "job_link")
+```
+
+```{r}
+write_csv(job_postings_with_skills, "job_postings_with_skills.csv")
+```
+
+```{r}
+job_postings_norm <- job_postings_df %>%
+  distinct(job_link, .keep_all = TRUE) %>%  # Keep one row per unique job_link
+  mutate(job_posting_id = row_number()) %>% # Create a unique job_posting_id for each row
+  select(job_posting_id, job_link, job_title, company)
+```
+ 
+```{r}
+sep_job_skills <- job_postings_with_skills %>%
+  separate_rows(job_skills, sep = ",\\s*")
+```
+
+```{r}
+sep_skills <- sep_job_skills %>%
+  distinct(job_skills) %>%
+  mutate(skill_id = row_number())
+```
+
+```{r}
+job_posting_skills <- sep_job_skills %>%
+  left_join(job_postings_norm, by = "job_link") %>%         
+  left_join(sep_skills, by = "job_skills") %>%                
+  select(job_posting_id, skill_id,job_link)
+```
+
+```{r}
+write_csv(job_postings_norm, "job_postings_norm.csv")
+write_csv(sep_skills, "sep_skills.csv")
+write_csv(job_posting_skills, "job_posting_skills.csv")
+```
+
+
