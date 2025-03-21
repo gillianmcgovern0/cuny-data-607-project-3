@@ -1,0 +1,84 @@
+---
+title: "Untitled"
+author: "Gillian McGovern"
+date: "2025-03-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the Libraries
+
+```{r}
+library(tidyverse)
+library(slackr)
+library(dplyr)
+library(tidytext)
+library(tm)
+library(stringr)
+library(topicmodels)
+```
+
+## Read the Data
+
+```{r}
+job_postings_norm <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/job_postings_norm.csv", show_col_types = FALSE)
+job_posting_with_skills <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/job_postings_with_skills.csv", show_col_types = FALSE)
+sep_skills <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/sep_skills.csv", show_col_types = FALSE)
+```
+
+Filter out unrelated job titles:
+
+```{r}
+head(job_posting_with_skills, 20)
+
+# Break up job title in all possible pairs of words
+skills_broken_2_words <- job_posting_with_skills %>%
+  unnest_tokens(title, job_title, token = "ngrams", n = 2) %>%
+  filter(!is.na(title)) %>%
+  count(title, sort = TRUE)
+head(skills_broken_2_words, 50)
+
+# Grab the top 20 pairs in job titles to focus on
+popular_data_science_skills_vector = skills_broken_2_words$title[1:20]
+popular_data_science_skills_vector
+
+# Filter for the job titles we want to focus on
+job_posting_with_skills_filtered <- job_posting_with_skills %>%
+  mutate(job_title_duplicate = job_title) %>%
+  unnest_tokens(title, job_title, token = "ngrams", n = 2)  %>%
+  filter(title %in% popular_data_science_skills_vector)
+head(job_posting_with_skills_filtered, 5)
+```
+
+Make data frame tidy, and get the count for each skill:
+
+```{r}
+# Make the dataframe tidy - break up the job_skills variable so each observation is job title/single skill combo
+tidy_top_skills <- job_posting_with_skills_filtered  %>%
+  unnest_tokens(skill, job_skills, token = 'regex', pattern=",") %>%
+  count(skill, sort = TRUE) # get the frequency
+
+# Grab the top 20 skills
+top_20_skills <- head(tidy_top_skills, 20)  
+
+# Plot 
+top_20_skills |>
+  ggplot(aes(x = skill, y = n)) +
+  geom_col() + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+```{r}
+# I was trying to play around with the "topics" tidytext can automatically create:
+# https://www.tidytextmining.com/topicmodeling
+
+# tidy_job_posting_with_skills_dtm <- tidy_job_posting_with_skills %>%
+#   cast_dtm(job_title_other, title, n)
+# 
+# tidy_job_posting_with_skills_dtm_lda <- LDA(tidy_job_posting_with_skills_dtm, k = 4, control = list(seed = 1234))
+# tidy_job_posting_with_skills_dtm_lda
+#> A LDA_VEM topic model with 4 topics.
+```
+
