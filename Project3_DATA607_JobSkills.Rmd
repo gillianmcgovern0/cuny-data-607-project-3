@@ -16,8 +16,8 @@ library(tidyverse)
 
 
 ```{r}
-job_postings_df <- read_csv("/Users/aaliyahmjh/Downloads/job_postings.csv", show_col_types = FALSE)
-job_skills_df <- read_csv("/Users/aaliyahmjh/Downloads/job_skills.csv", show_col_types = FALSE)
+job_postings_df <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/original_job_postings.csv", show_col_types = FALSE)
+job_skills_df <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/original_job_skills.csv", show_col_types = FALSE)
 ```
 
 ```{r}

@@ -99,7 +99,7 @@ top_20_skills <- head(tidy_top_skills, 20)
 # Plot 
 top_20_skills |>
   ggplot(aes(x = reorder(skill, n), y = n)) +
-  geom_col() + 
+  geom_col(fill = "steelblue") + 
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   labs(title = "Top 20 Skills",
     x = "Skill",
