@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "DATA 607 Project 2 Part 2"
 author: "Gillian McGovern, Aali John-Harry, Farhod Ibragimov"
 date: "2025-03-20"
 output: html_document
@@ -24,26 +24,27 @@ library(knitr)
 
 ## Read the Data
 
+Read in normalized datasets:
+
 ```{r}
 job_postings_norm <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/job_postings_norm.csv", show_col_types = FALSE)
 job_posting_with_skills <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/job_postings_with_skills.csv", show_col_types = FALSE)
 sep_skills <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/sep_skills.csv", show_col_types = FALSE)
 ```
 
-Filter out unrelated job titles:
+Filter out unrelated job titles using NLP:
 
 ```{r}
-head(job_posting_with_skills, 20)
+head(job_posting_with_skills, 5)
 
-# Break up job title in all possible pairs of words
+# Break up job title in all possible combinations of 3 consecutive words
 titles_broken_3_words <- job_posting_with_skills %>%
   unnest_tokens(title, job_title, token = "ngrams", n = 3) %>%
   filter(!is.na(title)) %>%
   count(title, sort = TRUE)
-head(titles_broken_3_words, 50)
-```
+head(titles_broken_3_words, 5)
 
-```{r}
+# Find data science related titles
 titles_broken_3_words <- titles_broken_3_words %>%
   mutate(
     # Replace "sr" with "senior" as a whole word
@@ -63,12 +64,13 @@ titles_broken_3_words <- titles_broken_3_words %>%
   filter(str_detect(title, regex("analytic|model|engineer|data|machine", ignore_case = TRUE))) %>%
   arrange(desc(n))
 
+# Find the top 20 data science related titles
 popular_data_science_skills_vector <- titles_broken_3_words$title[1:20]
 popular_data_science_skills_vector
 
 # Refresh job_posting_with_skills_filtered using the updated popular titles
 job_posting_with_skills_filtered <- job_posting_with_skills %>%
-  mutate(job_title_duplicate = job_title) %>%
+  mutate(job_title_duplicate = job_title) %>% # Keep the original job_title variable
   unnest_tokens(title, job_title, token = "ngrams", n = 3)  %>%
   filter(title %in% popular_data_science_skills_vector) %>%
   left_join(titles_broken_3_words, by = "title") %>%
@@ -80,19 +82,34 @@ job_posting_with_skills_filtered <- job_posting_with_skills %>%
 head(job_posting_with_skills_filtered, 5)
 ```
 
+Top 20 data science related titles:
+
 ```{r}
 top_20_titles <- head(titles_broken_3_words, 20)
 top_20_titles
 ```
 
-Make data frame tidy, and get the count for each skill:
+The `job_posting_with_skills_filtered` is untidy since the `job_skills` variable contains a list of all the skills for the job posting. This makes it difficult to update the job posting with a new skill. Instead, let's make each observation represent a single skill for a job posting:
 
 ```{r}
-# Make the dataframe tidy - break up the job_skills variable so each observation is job title/single skill combo
+# Make the data frame tidy - break up the `job_skills` variable so each observation is a job title/single skill combo
 tidy_top_skills <- job_posting_with_skills_filtered  %>%
   unnest_tokens(skill, job_skills, token = 'regex', pattern=",") %>%
   count(skill, sort = TRUE) # get the frequency
+```
 
+Final tidy data frame for analysis:
+
+```{r}
+# Final tidy data frame
+head(tidy_top_skills)
+```
+
+## Analysis
+
+Overall top 20 skills for data science related titles:
+
+```{r}
 # Grab the top 20 skills
 top_20_skills <- head(tidy_top_skills, 20)  
 
@@ -106,7 +123,8 @@ top_20_skills |>
     y = "Count")
 ```
 
-Top Skills per job title:
+Top skills per job title:
+
 ```{r}
 #  For each title, break up the 'job_skills' column into individual skills and count them.
 top_skills_by_job_title <- job_posting_with_skills_filtered |>
@@ -146,6 +164,8 @@ for (job in unique_titles) {
 
 ```
 
+Top 10 states by job openings:
+
 ```{r}
 state_summary <- job_posting_with_skills_filtered %>%
   mutate(state = str_extract(job_location, "[A-Z]{2}$")) %>%
@@ -168,6 +188,8 @@ ggplot(state_summary, aes(x = reorder(state, openings), y = openings)) +
        y = "Number of Openings") +
   theme_minimal()
 ```
+
+Top 10 skills in NY vs CA:
 
 ```{r}
 tidy_top_skills_ny <- job_posting_with_skills_filtered %>%
@@ -207,6 +229,8 @@ ggplot(tidy_top_skills_ca, aes(x = reorder(skill, n), y = n)) +
   theme_minimal()
 ```
 
+Top 5 skills per job level:
+
 ```{r}
 tidy_top_skills_by_job_level <- job_posting_with_skills_filtered %>%
   unnest_tokens(skill, job_skills, token = 'regex', pattern=",") %>%
@@ -229,3 +253,6 @@ ggplot(tidy_top_skills_by_job_level, aes(x = reorder(skill, n), y = percent)) +
 ```
 
 
+## Conclusions
+
+Please see `DATA 607 Project - Data Science Skills` document for findings and conclusions.
