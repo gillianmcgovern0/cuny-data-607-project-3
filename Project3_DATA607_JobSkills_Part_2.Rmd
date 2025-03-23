@@ -1,5 +1,5 @@
 ---
-title: "DATA 607 Project 2 Part 2"
+title: "DATA 607 Project 3 Part 2"
 author: "Gillian McGovern, Aali John-Harry, Farhod Ibragimov"
 date: "2025-03-20"
 output: html_document
@@ -8,6 +8,18 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+## Overview
+
+To answer the question, “Which are the most valued data science skills?", we decided to use the `Data Science Job Postings & Skills (2024)` dataset from kaggle which can be found here: https://www.kaggle.com/datasets/asaniczka/data-science-job-postings-and-skills 
+
+The dataset was built from a raw dump of data science-related job postings collected from LinkedIn and contains job postings with attributes such as job title, description, and requirements. We will examine the `jobs_postings.csv` and `jobs_skills.csv` file in-depth and analyze these tables.
+
+Note: Please see https://github.com/gillianmcgovern0/cuny-data-607-project-3/blob/40091bedcf60f343699a1c6c44f2f9c24d8efa61/Project3_DATA607_JobSkills.Rmd for how we normalized the datasets
+
+## Motivation
+
+Our group’s motivation for choosing this dataset for our project was influenced by our desire to combine academic theories with actual industry insights. As students pursuing an MS in Data Science, we recognized that this dataset offers real-world insights into the demand for skills, roles, and requirements in this industry. As we analyze the job titles, descriptions, and skills required, we can identify emerging trends and areas that we may be lacking in skill. As a plus - we’re also able to put some of these skills to use as we transform this data, sharpening our technical abilities and preparing us for real-world challenges in our future careers. 
 
 ## Load the Libraries
 
@@ -24,7 +36,7 @@ library(knitr)
 
 ## Read the Data
 
-Read in normalized datasets:
+#### Read in the normalized datasets:
 
 ```{r}
 job_postings_norm <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/job_postings_norm.csv", show_col_types = FALSE)
@@ -32,7 +44,11 @@ job_posting_with_skills <- read_csv("https://raw.githubusercontent.com/gillianmc
 sep_skills <- read_csv("https://raw.githubusercontent.com/gillianmcgovern0/cuny-data-607-project-3/refs/heads/main/sep_skills.csv", show_col_types = FALSE)
 ```
 
-Filter out unrelated job titles using NLP:
+#### Filter job titles with NLP:
+
+We applied natural language processing (`tidytext` library) to scan job titles and retain only those related to data science roles, such as "machine learning engineer," "lead data engineer," or "senior data analyst." We decided to use the `tidytext` library since it provides an efficient way to do text mining tasks. This step narrows our focus to relevant positions and removes any outliers or irrelevant job postings. 
+
+To perform word frequency analysis on the job titles, we decided on using the `unnest_tokens` function with the `token = "ngrams"` argument, which tokenizes by a certain amount of adjacent words. After trial and error, we decided that using the most common trigrams (consecutive sequences of 3 words) for job title would be the most efficient way to find the most popular data science related job titles:
 
 ```{r}
 head(job_posting_with_skills, 5)
@@ -82,23 +98,27 @@ job_posting_with_skills_filtered <- job_posting_with_skills %>%
 head(job_posting_with_skills_filtered, 5)
 ```
 
-Top 20 data science related titles:
+#### Top 20 data science related titles:
 
 ```{r}
 top_20_titles <- head(titles_broken_3_words, 20)
 top_20_titles
 ```
 
-The `job_posting_with_skills_filtered` is untidy since the `job_skills` variable contains a list of all the skills for the job posting. This makes it difficult to update the job posting with a new skill. Instead, let's make each observation represent a single skill for a job posting:
+#### Tidy the data frame:
+
+After filtering for relevant jobs, we were still left with an untidy dataset where all skills were listed in a single variable `job_skills`. This structure makes it difficult to add a new skill for a job posting. We transformed the dataset by splitting up `job_skills` so that each observation represents a unique job title and single skill combination. This restructuring simplifies the future analysis and visualization of individual job titles and related skills.
+
+Additionally, to produce a data frame with skills frequencies related to filtered job titles, we extracted the skills by counting their occurrences within the filtered job titles to build a frequency table. This new data frame emphasizes the most in-demand skills and gives us a clearer insight into the industry trends:
 
 ```{r}
-# Make the data frame tidy - break up the `job_skills` variable so each observation is a job title/single skill combo
+# Make the data frame tidy - break up the `job_skills` variable (a list of skills represented as a string) so each observation is a job title/single skill combo
 tidy_top_skills <- job_posting_with_skills_filtered  %>%
   unnest_tokens(skill, job_skills, token = 'regex', pattern=",") %>%
   count(skill, sort = TRUE) # get the frequency
 ```
 
-Final tidy data frame for analysis:
+Here is the final tidy data frame for analysis:
 
 ```{r}
 # Final tidy data frame
@@ -107,7 +127,7 @@ head(tidy_top_skills)
 
 ## Analysis
 
-Overall top 20 skills for data science related titles:
+#### Overall top 20 skills for data science related titles:
 
 ```{r}
 # Grab the top 20 skills
@@ -123,7 +143,11 @@ top_20_skills |>
     y = "Count")
 ```
 
-Top skills per job title:
+The top 5 skills for all data science related roles in order are python, SQL, machine learning, communication, and data visualization. Technical skills take up most of the top skills. Communication is also a top skill, indicating that a data science related role will involve effective collaboration and communication with other teams.
+
+#### Top skills per job title:
+
+We created a new data frame for the top 10 skills grouped by job title. This new data frame shows how skills vary between different roles. 
 
 ```{r}
 #  For each title, break up the 'job_skills' column into individual skills and count them.
@@ -164,7 +188,13 @@ for (job in unique_titles) {
 
 ```
 
-Top 10 states by job openings:
+For a data scientist role, for example, "Senior Data Scientist", the first top 3 skills are the same as the general top skills for a data scientist role, but machine learning ranks higher than SQL. The next 2 skills within the top 5, R and statistics, are more technical for a data scientist compared to the general top skills, communication and data visualization.
+
+For a data analyst role such as "Business Data Analyst", SQL, data analysis, project management, data visualization and communication are the top skills. This shows that a data science position could require more specific technical skills compared to an analyst role.
+
+#### Top 10 states by job openings:
+
+We extracted state information from job location data using regex, ranked the top 10 states by job openings, and visualized this distribution.
 
 ```{r}
 state_summary <- job_posting_with_skills_filtered %>%
@@ -189,7 +219,13 @@ ggplot(state_summary, aes(x = reorder(state, openings), y = openings)) +
   theme_minimal()
 ```
 
-Top 10 skills in NY vs CA:
+CA clearly dominates the Data Science job market with 82 openings, much more than the next highest state, TX, which has 48.
+
+This is likely due to California's booming tech scene (such as Silicon Valley and the Bay Area) which is home to a large number of tech companies and startups that may create a high demand for data science expertise. 
+
+#### Top 10 skills in NY vs CA:
+
+We compared the top 10 skills in New York and California to examine the regional differences.
 
 ```{r}
 tidy_top_skills_ny <- job_posting_with_skills_filtered %>%
@@ -229,7 +265,11 @@ ggplot(tidy_top_skills_ca, aes(x = reorder(skill, n), y = n)) +
   theme_minimal()
 ```
 
-Top 5 skills per job level:
+The top skills for CA vs NY also emphasize CA’s booming tech scene. CA shows more specific technical skills such as tensorflow and pytorch, compared to NY’s top skills which contains more general skills such as data analysis. 
+
+#### Top 5 skills per job level:
+
+We highlighted mid-senior and associate roles by categorizing job titles based on these experience levels and created a chart displaying the top skills for each group. This classification allowed us to analyze trends and differences in skill requirements across career levels.
 
 ```{r}
 tidy_top_skills_by_job_level <- job_posting_with_skills_filtered %>%
@@ -252,7 +292,32 @@ ggplot(tidy_top_skills_by_job_level, aes(x = reorder(skill, n), y = percent)) +
   theme_minimal()
 ```
 
+Entry-level positions show a mix of various skills, suggesting that employers value a well-rounded foundation rather than specialization at the start of a career.
+
+Job titles with terms like "senior", "lead", or "manager" often include responsibilities beyond technical work. This shows that there is a growing need for leadership and communication - a combination of technical knowledge with the skills needed to work well with others, and potentially help lead a team.
 
 ## Conclusions
 
-Please see `DATA 607 Project - Data Science Skills` document for findings and conclusions.
+Please see below for a summary of our findings:
+
+##### Overall Top Skills: 
+
+The general top 3 skills for all data science related roles are python, SQL and machine learning. 
+
+For a data scientist role specifically, the top 3 skills are the same, but machine learning ranks higher than SQL. For a data analyst role, SQL, data analysis, and project management are the top skills. This shows that data science position could require more technical skills compared to an analyst role.
+
+##### Balanced Skill Set in Associate-Level Roles: 
+
+Entry-level positions show a mix of various skills, suggesting that employers value a well-rounded foundation rather than specialization at the start of a career. 
+
+##### Emergence of Leadership in Senior Roles: 
+
+Job titles with terms like senior, lead, or manager often include responsibilities beyond technical work. This shows that there is a growing need for leadership and communication - a combination of technical knowledge with the skills needed to work well with others. 
+
+##### State Concentration: 
+
+CA clearly dominates the Data Science job market with 82 openings, much more than the next highest state, TX, which has 48. 
+
+This is likely due to California's booming tech scene (such as Silicon Valley and the Bay Area) which is home to a large number of tech companies and startups that may create a high demand for data science expertise. 
+
+The top skills for CA vs NY also emphasize CA’s booming tech scene. CA shows more specific technical skills such as tensorflow and pytorch, compared to NY’s top skills which contains more general skills such as data analysis.
